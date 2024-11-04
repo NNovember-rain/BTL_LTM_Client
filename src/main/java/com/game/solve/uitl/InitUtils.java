@@ -2,7 +2,6 @@ package com.game.solve.uitl;
 
 import com.game.solve.model.Item;
 import com.game.solve.view.ClientMainView;
-import com.game.solve.view.MenuGameView;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -79,9 +78,26 @@ public class InitUtils {
         return items;
     }
 
-    public static JLabel creatLabel(String message,int x,int y,int w,int h,int size){
+    public static JLabel creatLabel(String message, int x, int y, int w, int h, int size) {
         JLabel jLabel = new JLabel(message);
-        jLabel.setFont(new Font("Bungee", Font.BOLD, size));
+        try {
+            // Tải font tùy chỉnh từ tài nguyên
+            InputStream is = InitUtils.class.getResourceAsStream("/fonts/RubikGemstones-Regular.ttf");
+            if (is != null) {
+                // Tạo và áp dụng font tùy chỉnh với kích thước đã cho và kiểu in đậm
+                Font customFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont( (float) size);
+                jLabel.setFont(customFont);
+            } else {
+                // Nếu không tải được font tùy chỉnh, sử dụng font mặc định
+                jLabel.setFont(new Font("Arial", Font.BOLD, size));
+            }
+        } catch (FontFormatException | IOException e) {
+            e.printStackTrace();
+            // Nếu có lỗi, sử dụng font mặc định
+            jLabel.setFont(new Font("Arial", Font.BOLD, size));
+        }
+
+        // Thiết lập vị trí và màu sắc
         jLabel.setBounds(x, y, w, h);
         jLabel.setForeground(Color.BLACK);
         return jLabel;
@@ -97,6 +113,7 @@ public class InitUtils {
         button.setIcon(icon);
         return InitUtils.addEvenAndProperty(button,jLabel,scale_w,scale_h,icon,hoverIcon); //TODO add even
     }
+
 
     //TODO: thêm nhãn, thuộc tính và sự kiện cho button
     public static JButton addEvenAndProperty(JButton button,JLabel messageLabel,int scale_w,int scale_h,ImageIcon icon,ImageIcon hoverIcon ){
@@ -116,8 +133,9 @@ public class InitUtils {
                 button.setIcon(hoverIcon);
 
                 // Đổi màu chữ thành màu khác khi hover
-                messageLabel.setForeground(Color.PINK);
+                messageLabel.setForeground(new Color(214, 88, 47)); //0x2876A3
                 messageLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
             }
 
             @Override
@@ -136,12 +154,67 @@ public class InitUtils {
     }
 
 
+    public static JButton createButtonFunctionIcon(int x, int y, int w, int h, int scale_w, int scale_h, String imagePath) {
+        JButton button = new JButton();
+        button.setBounds(x, y, w, h);
+
+        // Tạo icon gốc và icon khi hover
+        ImageIcon icon = InitUtils.createResizedIconFromResource(imagePath, scale_w, scale_h);
+        ImageIcon hoverIcon = InitUtils.createResizedIconFromResource(imagePath, scale_w + 10, scale_h + 10);
+
+        // Thiết lập icon và cài đặt thuộc tính giao diện
+        button.setIcon(icon);
+        button.setOpaque(false);
+        button.setContentAreaFilled(false);  // Không vẽ nền
+        button.setBorderPainted(false);      // Không vẽ viền mặc định
+
+        // Thêm sự kiện hover và thuộc tính
+        return addHoverEffect(button, scale_w, scale_h, icon, hoverIcon);
+    }
+
+    public static JButton addHoverEffect(JButton button, int scale_w, int scale_h, ImageIcon icon, ImageIcon hoverIcon) {
+        // Thêm sự kiện hover
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                button.setIcon(hoverIcon);
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setCursor(Cursor.getDefaultCursor());
+                button.setIcon(icon);
+            }
+        });
+
+        return button;
+    }
+
+
+
     //TODO: tạo CheckBox
     public static JCheckBox createCustomCheckBox(String text, int x, int y, boolean selected) {
         JCheckBox checkBox = new JCheckBox(text);
         checkBox.setBounds(x, y, 100, 30);
         checkBox.setOpaque(false); // Làm cho checkbox trong suốt
-        checkBox.setFont(new Font("Arial", Font.PLAIN, 14)); // Thiết lập font chữ thông thường
+
+        // Tải font tùy chỉnh từ tài nguyên
+        try {
+            InputStream is = InitUtils.class.getResourceAsStream("/fonts/RubikGemstones-Regular.ttf");
+            if (is != null) {
+                // Tạo font tùy chỉnh với kiểu in đậm
+                Font customFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont(Font.BOLD, 14f); // Font in đậm với kích thước 14
+                checkBox.setFont(customFont);
+            } else {
+                // Nếu không tải được font tùy chỉnh, sử dụng font mặc định với kiểu in đậm
+                checkBox.setFont(new Font("Arial", Font.BOLD, 14));
+            }
+        } catch (FontFormatException | IOException e) {
+            e.printStackTrace();
+            // Nếu có lỗi, sử dụng font mặc định với kiểu in đậm
+            checkBox.setFont(new Font("Arial", Font.BOLD, 14));
+        }
 
         // Đặt checkbox được chọn mặc định nếu 'selected' là true
         checkBox.setSelected(selected);
@@ -168,7 +241,7 @@ public class InitUtils {
                 if (cb.isSelected()) {
                     // Tô màu nhỏ hơn viền để tránh bị chớm ra ngoài
                     int innerSize = size - 3; // Giảm kích thước phần bên trong
-                    int xInner = xCircle +2; // Đẩy phần màu bên trong sang phải
+                    int xInner = xCircle + 2; // Đẩy phần màu bên trong sang phải
                     int yInner = yCircle + 2; // Đẩy phần màu bên trong xuống dưới
                     Ellipse2D innerCircle = new Ellipse2D.Double(xInner, yInner, innerSize, innerSize);
 
@@ -184,9 +257,5 @@ public class InitUtils {
         });
 
         return checkBox;
-
     }
-
-
-
 }

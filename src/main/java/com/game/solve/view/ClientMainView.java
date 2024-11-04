@@ -1,7 +1,7 @@
 package com.game.solve.view;
 
-
-
+import com.game.solve.model.DataSending;
+import com.game.solve.model.UserRequest;
 import com.game.solve.socket.ManageSocket;
 import com.game.solve.uitl.InitUtils;
 import com.game.solve.model.Item;
@@ -14,6 +14,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -21,71 +22,101 @@ import java.util.Collections;
 
 public class ClientMainView extends JPanel {
 
-
-    private final JPanel[] shelfPanels;
-    private final JLabel[] floorSlots;
-    private final JLabel[][] shelfSlots;
+    private JPanel mainPanel;
+    private JPanel[] shelfPanels;
+    private JLabel[] floorSlots;
+    private JLabel[][] shelfSlots;
     private BufferedImage backgroundImage;
     private JLabel draggedLabel = null;
     private Point initialClick;
     private int originFloorSlotIndex;
     private int originShelfIndex;
-    private final ArrayList<Item> items;
-    private JButton showAssignmentButton;
-    private final JFrame parentFrame;
-    boolean checkSwapView;
-
+    private ArrayList<Item> items;
+    private User currentUser;
+    private CardLayout cardLayout;
+    private JLabel countdownLabel; // Nhãn hiển thị bộ đếm
+    private Timer countdownTimer; // Lưu trữ tham chiếu tới Timer
+    boolean checkSwapView=false;
+    int count = 30;
 
     public static void main(String[] args) throws Exception {
-
-        String HOST="localhost";
-        int PORT=12345;
-        Socket socketConnect=new Socket(HOST,PORT);
-        ManageSocket socket=new ManageSocket(socketConnect);
+        String HOST = "localhost";
+        int PORT = 12345;
+        Socket socketConnect = new Socket(HOST, PORT);
+        ManageSocket socket = ManageSocket.getInstance(socketConnect);
         ArrayList<Item> items = InitUtils.getItemInGame();
 
-        JFrame jframe = new JFrame("Xep Do");
+        JFrame jframe = new JFrame("ITEM ORDER");
         jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         jframe.setResizable(false); // Ngăn không cho thay đổi kích thước
 
         jframe.setSize(380, 850);
         jframe.setLocationRelativeTo(null);
 
-        LoginView loginView=new LoginView(jframe,socket);
-        jframe.setContentPane(loginView);
+        User user = new User();
+        ClientMainView clientMainView = new ClientMainView(items);
+        jframe.setContentPane(clientMainView.getMainPanel()); // Đặt mainPanel chứa các view
 
-//        MenuGameView menuGameView = new MenuGameView(jframe);
-//        jframe.setContentPane(menuGameView);
         jframe.setVisible(true);
-
-
     }
 
-    public ClientMainView(User user, ArrayList<Item> items, JFrame parentFrame,ManageSocket socket) {
-        this.parentFrame = parentFrame;
+    public ClientMainView(ArrayList<Item> items) {
         this.items = items;
-        checkSwapView=true;
+        cardLayout = new CardLayout();
+        mainPanel = new JPanel(cardLayout);
 
-        setLayout(null);
+        //Khởi tạo ClientMainView và AssignmentView
 
-        //TODO: Trộn ngẫu nhiêm các item ban đầu
-        ArrayList<Item> shuffledItems = new ArrayList<>(items);
+        JPanel clientMainView = createClientView(items, new User());
+        AssignmentView assignmentView = new AssignmentView();
+        EndGameView endGameView = new EndGameView(this, assignmentView, items);
+        TutorialView tutorialView = new TutorialView();
+        RankView rankView = new RankView();
+        ListUserOnlineView listUserOnlineView =new ListUserOnlineView();
+        MenuGameView menuGameView = new MenuGameView(new User(), this.items, this, endGameView, assignmentView, tutorialView,rankView,listUserOnlineView);
+        LoginView loginView = new LoginView(menuGameView);
+        RegisterView registerView = new RegisterView(menuGameView);
+        WinView winView = new WinView();
+        LoseView loseView = new LoseView();
+
+        mainPanel.add(loginView, "LoginView");
+        mainPanel.add(menuGameView, "MenuGameView");
+        mainPanel.add(clientMainView, "ClientView");
+        mainPanel.add(assignmentView, "AssignmentView");
+        mainPanel.add(endGameView, "EndGameView");
+        mainPanel.add(registerView, "RegisterView");
+        mainPanel.add(tutorialView, "TutorialView");
+        mainPanel.add(rankView, "RankView");
+        mainPanel.add(listUserOnlineView, "ListUserOnlineView");
+        mainPanel.add(winView, "WinView");
+        mainPanel.add(loseView, "LoseView");
+
+
+        // Khởi tạo bộ đếm trong ClientMainView
+        countdownLabel = new JLabel("10", JLabel.CENTER);
+        countdownLabel.setFont(new Font("Arial", Font.BOLD, 30));
+        countdownLabel.setBounds(140, 10, 100, 50);
+        clientMainView.add(countdownLabel);
+    }
+
+    // Sửa lại phương thức createClientView để trả về ClientMainView thay vì JPanel mới
+    private JPanel createClientView(ArrayList<Item> items, User currentUser) {
+        this.setLayout(null);
+
+        // Nạp hình nền vào ClientMainView
+        InputStream background = getClass().getResourceAsStream("/images/bg3.png");
+        backgroundImage = InitUtils.initBackgroundImage(background);
+
+        // TODO: Trộn ngẫu nhiên các item ban đầu
+        ArrayList<Item> shuffledItems = new ArrayList<>(this.items);
         Collections.shuffle(shuffledItems);
 
-        //TODO: Tạo bố cục ban đầu nơi để các item
+        // TODO: Tạo bố cục ban đầu nơi để các item
         floorSlots = new JLabel[8];
         JPanel itemFloorPanel = createFloorItemPanel(shuffledItems);
-        add(itemFloorPanel);
+        this.add(itemFloorPanel); // Thêm vào chính ClientMainView
 
-        //TODO: gọi màn hình AssignmentView khi run thì sẽ hiện ra
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                showAssignmentView(items,socket,user);
-            }
-        });
-
-        //TODO: Khởi tạo bố cục các kệ gồm : 4 cái , mỗi cái có 2 vị trí đặt
+        // TODO: Khởi tạo bố cục các kệ gồm: 4 cái, mỗi cái có 2 vị trí đặt
         shelfPanels = new JPanel[4];
         shelfSlots = new JLabel[4][2];
         int[] xPositions = {25, 215, 25, 210};
@@ -93,109 +124,111 @@ public class ClientMainView extends JPanel {
 
         for (int i = 0; i < shelfPanels.length; i++) {
             shelfPanels[i] = createShelfPanel(xPositions[i], yPositions[i], i); // khởi tạo panel shelf thứ i tại vị trí x,y
-            add(shelfPanels[i]); // thêm panel vào giao diện chính
+            this.add(shelfPanels[i]); // Thêm vào chính ClientMainView
         }
 
-        // Thêm nút "Show Assignment" gọi màn hình AssignmentView
-        createShowAssignmentButton(items,socket,user);
+        JButton buttonShowAssigntmentView=InitUtils.createButtonFunctionIcon(300,10,50,50,520,520,"/images/assignmenIcon.png");
+        buttonShowAssigntmentView.addActionListener(e -> showAssignmentView()); // Đóng ứng dụng
+        add(buttonShowAssigntmentView);
 
-        //Background
-        InputStream background = getClass().getResourceAsStream("/images/bg3.png");
-        backgroundImage = InitUtils.initBackgroundImage(background);
+        return this; // Trả về chính ClientMainView
+    }
 
-        //Tạo bộ đếm 10 giây
-        countdownToEndGameView(parentFrame,socket,user);
+    public void showAssignmentView() {
+        Container parent = getParent();
+        if (parent instanceof JPanel) {
+            CardLayout cardLayout = (CardLayout) parent.getLayout();
+
+            // Chuyển sang AssignmentView
+            cardLayout.show(parent, "AssignmentView");
+
+            // Tạo một Timer để đợi 4 giây trước khi quay lại ClientMainView
+            Timer delayTimer = new Timer(4000, new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if(!checkSwapView) cardLayout.show(parent, "ClientView");
+                }
+            });
+            delayTimer.setRepeats(false); // Chỉ chạy một lần
+            delayTimer.start(); // Bắt đầu bộ đếm thời gian
+        }
     }
 
 
-    // Phương thức tạo nút "Show Assignment"
-    private void createShowAssignmentButton(ArrayList<Item> shuffledItems,ManageSocket socket,User user) {
-        showAssignmentButton = new JButton();  // Tạo nút không có tên
-        showAssignmentButton.setBounds(1, -11, 55, 70);
-        String imagePath = "/images/btA2.png";
-        ImageIcon icon = InitUtils.createResizedIconFromResource(imagePath, 600, 680);
-        showAssignmentButton.setIcon(icon);
 
-        // Làm trong suốt nút
-        showAssignmentButton.setOpaque(false);
-        showAssignmentButton.setContentAreaFilled(false);
-        showAssignmentButton.setBorderPainted(false);
+    public JPanel getMainPanel() {
+        return mainPanel;
+    }
 
-        // Thêm sự kiện hành động
-        showAssignmentButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                showAssignmentView(shuffledItems,socket,user);
-            }
-        });
+    // Phương thức để nhận đối tượng User sau khi đăng nhập
+    public void setCurrentUser(User user) {
+        this.currentUser = user;  // Gán đối tượng User đã đăng nhập
+    }
 
-        add(showAssignmentButton);
+    public User getCurrentUser() {
+        return this.currentUser;  // Trả về đối tượng User đã đăng nhập
+    }
+
+    public void setItems(ArrayList<Item> items) {
+        this.items=items;
     }
 
 
-    // Phương thức để hiển thị AssignmentView trong 3 giây
-    private void showAssignmentView(ArrayList<Item> shuffledItems,ManageSocket socket, User user) {
-        AssignmentView assignmentView = new AssignmentView(shuffledItems,socket,user);
-        parentFrame.setContentPane(assignmentView);
-        parentFrame.revalidate();
-        parentFrame.repaint();
 
-        // Đặt thời gian chờ 3 giây, sau đó quay lại ClientView
-        Timer timer = new Timer(3000, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if(checkSwapView==false) showEndGameView(parentFrame,socket,user);
-                else parentFrame.setContentPane(ClientMainView.this);
-                parentFrame.revalidate();
-                parentFrame.repaint();
-            }
-        });
-        timer.setRepeats(false);
-        timer.start();
-    }
 
-    private void countdownToEndGameView(JFrame parentFrame,ManageSocket socket,User user) {
-        final int countdownTime = 34; // 24 giây (thời gian bạn mong muốn)
-        JLabel countdownLabel = new JLabel("00:24", JLabel.CENTER); // Hiển thị bắt đầu từ 00:24
-        countdownLabel.setFont(new Font("Arial", Font.BOLD, 30));
-        countdownLabel.setBounds(-10, 10, 380, 50);
-        add(countdownLabel);
-        repaint();
-
-        Timer countdownTimer = new Timer(1000, new ActionListener() {
-            int timeLeft = countdownTime;
+    public void startCountdown() {
+        countdownLabel.setText("00:35"); // Bắt đầu với 35 giây
+        countdownTimer = new Timer(1000, new ActionListener() { // Tạo một bộ đếm thời gian mỗi 1 giây
+            int countdown = 35; // Bắt đầu từ 35 giây
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                timeLeft--;
+                countdown--; // Giảm số giây
+                int minutes = countdown / 60;
+                int seconds = countdown % 60;
+                countdownLabel.setText(String.format("%02d:%02d", minutes, seconds)); // Cập nhật nhãn hiển thị với định dạng mm:ss
 
-                // Tính số phút và giây
-                int minutes = timeLeft / 60;
-                int seconds = timeLeft % 60;
+                if (countdown == 0) {
+                    checkSwapView=true;
+                    countdownTimer.stop(); // Dừng bộ đếm khi hết thời gian
+                    Container parent = getParent();
+                    if (parent instanceof JPanel) {
+                        CardLayout cardLayout = (CardLayout) parent.getLayout();
+                        cardLayout.show(parent, "LoseView"); // Chuyển sang LoseView
 
-                // Định dạng chuỗi thành "mm:ss"
-                String timeFormatted = String.format("%02d:%02d", minutes, seconds);
-                countdownLabel.setText(timeFormatted);
-
-                if (timeLeft <= 0) {
-                    ((Timer) e.getSource()).stop(); // Dừng bộ đếm
-                    checkSwapView = false;
-                    showEndGameView(parentFrame,socket,user); // Hiển thị EndGameView
+                        // Tạo một Timer để đợi 5 giây trước khi chuyển sang EndGameView
+                        Timer delayTimer = new Timer(5000, ev -> {
+                            // Chuyển sang EndGameView sau 4 giây
+                            cardLayout.show(parent, "EndGameView");
+                            checkSwapView=false;
+                        });
+                        delayTimer.setRepeats(false); // Chỉ chạy một lần
+                        delayTimer.start(); // Bắt đầu bộ đếm thời gian
+                    }
                 }
             }
         });
-        countdownTimer.start();
+
+        // Load custom font
+        try (InputStream is = InitUtils.class.getResourceAsStream("/fonts/RubikGemstones-Regular.ttf")) {
+            if (is != null) {
+                Font rubikGemstones = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont(24f); // Adjust size as needed
+                GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                ge.registerFont(rubikGemstones);
+                countdownLabel.setFont(rubikGemstones); // Set the font
+            } else {
+                System.err.println("Font not found!");
+            }
+        } catch (FontFormatException | IOException ex) {
+            ex.printStackTrace();
+        }
+
+        countdownTimer.start(); // Bắt đầu bộ đếm
     }
 
 
 
-    // Phương thức để hiển thị EndGameView
-    private void showEndGameView(JFrame parentFrame,ManageSocket socket,User user) {
-        EndGameView EndGameView = new EndGameView(parentFrame,socket,user);
-        parentFrame.setContentPane(EndGameView);
-        parentFrame.revalidate();
-        parentFrame.repaint();
-    }
+
 
     //TODO: Tạo bố cục nơi để các item ban đầu
     private JPanel createFloorItemPanel(ArrayList<Item> shuffledItems) {
@@ -327,7 +360,6 @@ public class ClientMainView extends JPanel {
     // TODO: check item xem đã full hay chưa , nếu rồi check đúng sai
     private void checkIfAllShelvesFilled() {
         boolean allFilled = true;
-        boolean result = false;
 
         for (JLabel[] slot : shelfSlots) {
             for (JLabel jLabel : slot) {
@@ -348,10 +380,44 @@ public class ClientMainView extends JPanel {
             }
 
             if (shelf.equals(this.items)) {
-                System.out.println("All shelves filled");
-            }
-            else System.out.println("sai");
+                try {
+                    ManageSocket socket = ManageSocket.getInstance(null);
+                    DataSending<UserRequest> dataSending = new DataSending<>();
+                    Integer id =this.getCurrentUser().getId();
+                    UserRequest userRequest=new UserRequest();
+                    userRequest.setId(id);
+                    String message = "points";
+                    dataSending.setData(userRequest);
+                    dataSending.setRequestType(message);
+                    socket.getWriter().writeObject(dataSending);
+                    socket.getWriter().flush();
+                    socket.getWriter().reset();
+                    DataSending<String> dataSendingListUser = (DataSending<String>) socket.getReader().readObject();
+                }catch (Exception e){
+                    System.out.println("Khong cap nhat diem thanh cong");
+                }
+                // Dừng countdown timer nếu nó đang chạy
+                if (countdownTimer != null && countdownTimer.isRunning()) {
+                    countdownTimer.stop(); // Dừng bộ đếm thời gian
+                }
 
+                // Chuyển sang WinView
+                Container parent = getParent();
+                if (parent instanceof JPanel) {
+                    CardLayout cardLayout = (CardLayout) parent.getLayout();
+                    cardLayout.show(parent, "WinView"); // Chuyển sang WinView
+
+                    // Tạo một Timer để đợi 4 giây trước khi chuyển sang EndGameView
+                    Timer delayTimer = new Timer(5000, e -> {
+                        // Chuyển sang EndGameView sau 4 giây
+                        cardLayout.show(parent, "EndGameView");
+                    });
+                    delayTimer.setRepeats(false); // Chỉ chạy một lần
+                    delayTimer.start(); // Bắt đầu bộ đếm thời gian
+                }
+            } else {
+                System.out.println("Sai rồi!");
+            }
         }
     }
 
@@ -409,6 +475,57 @@ public class ClientMainView extends JPanel {
         slotLabel.setVerticalAlignment(JLabel.CENTER);
         slotLabel.setPreferredSize(new Dimension(50, 50));
         return slotLabel;
+    }
+
+    public void resetItems() {
+        // Tạo một SwingWorker để xử lý việc reset trong background
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+
+            @Override
+            protected Void doInBackground() throws Exception {
+                // 1. Reset các item trên kệ (xóa icon và giá trị item)
+                for (int i = 0; i < shelfSlots.length; i++) {
+                    for (int j = 0; j < shelfSlots[i].length; j++) {
+                        shelfSlots[i][j].setIcon(null); // Xóa icon
+                        shelfSlots[i][j].putClientProperty("item", null); // Xóa item
+                    }
+                }
+
+                // 2. Trộn ngẫu nhiên các item
+                ArrayList<Item> shuffledItems = new ArrayList<>(items);  // Sao chép danh sách item gốc
+                Collections.shuffle(shuffledItems);  // Trộn ngẫu nhiên các item
+
+                // 3. Đặt lại các item vào sàn (floorSlots)
+                for (int i = 0; i < floorSlots.length; i++) {
+                    if (i < shuffledItems.size()) {  // Đảm bảo rằng không có slot nào bị trống
+                        Item item = shuffledItems.get(i);  // Lấy item từ danh sách trộn
+                        String imagePath = item.getImagePath();
+                        ImageIcon icon = InitUtils.createResizedIconFromResource(imagePath, 1100, 1090);
+
+                        if (icon != null) {
+                            floorSlots[i].setIcon(icon);  // Đặt lại icon cho slot
+                            floorSlots[i].putClientProperty("item", item);  // Gán lại item cho slot
+                            addDragAndDropFunctionality(floorSlots[i], ClientMainView.this, i, -1);  // Thêm sự kiện kéo thả
+                        }
+                    } else {
+                        // Nếu không còn item nào để đặt vào slot, thì làm trống nó
+                        floorSlots[i].setIcon(null);
+                        floorSlots[i].putClientProperty("item", null);
+                    }
+                }
+
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                // Cập nhật giao diện sau khi reset (được thực hiện trên EDT)
+                repaint();
+            }
+        };
+
+        // Bắt đầu thực hiện SwingWorker
+        worker.execute();
     }
 
     @Override

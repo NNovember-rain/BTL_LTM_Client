@@ -3,6 +3,7 @@ package com.game.solve.model;
 import java.io.Serializable;
 
 public class UserRequest implements Serializable {
+    Integer id;
     String userName;
     String password;
     String gender;
@@ -30,6 +31,12 @@ public class UserRequest implements Serializable {
     public void setPassword(String password) {
         this.password = password;
     }
+    public Integer getId() {
+        return id;
+    }
 
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
 }

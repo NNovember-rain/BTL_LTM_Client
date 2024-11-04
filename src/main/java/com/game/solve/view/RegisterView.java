@@ -1,187 +1,125 @@
 package com.game.solve.view;
 
-import com.game.solve.model.DataSending;
-import com.game.solve.model.User;
-import com.game.solve.model.UserRequest;
 import com.game.solve.socket.ManageSocket;
 import com.game.solve.uitl.InitUtils;
+import com.game.solve.model.DataSending;
+import com.game.solve.model.UserRequest;
+import com.game.solve.model.User;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 
-
-
 public class RegisterView extends JPanel {
     private BufferedImage backgroundImage;
 
-    public RegisterView(JFrame parentFrame, ManageSocket socket){
+    // Constructor
+    public RegisterView(MenuGameView menuGameView) {
         setLayout(null); // Sử dụng layout null để dễ dàng tùy chỉnh vị trí các thành phần
 
-        // Tải hình nền cho form đăng ký
+        JLabel messageLabel = InitUtils.creatLabel("Register", 65, 60, 380, 63, 55);
+        add(messageLabel);
+
+        // Load ảnh nền
         InputStream background = getClass().getResourceAsStream("/images/bgall.jpg");
         backgroundImage = InitUtils.initBackgroundImage(background);
 
-        // Thiết lập kích thước và vị trí của form ở giữa màn hình
-        int formWidth = 400;
-        int formHeight = 480;
-        int xCenter = (parentFrame.getWidth() - formWidth) / 2;
-        int yCenter = (parentFrame.getHeight() - formHeight) / 2;
-
-        // TODO: Tạo "Username"
-        JLabel usernameLabel = InitUtils.creatLabel("Username", xCenter + 42, yCenter + 5, 100, 30, 20);
+        // Tạo label "Username" với tọa độ cố định
+        JLabel usernameLabel = InitUtils.creatLabel("Username", 35, 170, 140, 30, 20);
         add(usernameLabel);
+        // Tạo ô input cho "Username" với tọa độ cố định
         JTextField usernameField = new JTextField();
-        usernameField.setBounds(xCenter + 42, yCenter + 40, 300, 30);
+        usernameField.setBounds(35, 210, 300, 30);
         add(usernameField);
 
-        // TODO: Tạo label "Password"
-        JLabel passwordLabel = InitUtils.creatLabel("Password", xCenter + 42, yCenter + 85, 100, 30, 20);
+        // Tạo label "Password" với tọa độ cố định
+        JLabel passwordLabel = InitUtils.creatLabel("Password", 35, 260, 130, 30, 20);
         add(passwordLabel);
+        // Tạo ô input cho "Password" với tọa độ cố định
         JPasswordField passwordField = new JPasswordField();
-        passwordField.setBounds(xCenter + 42, yCenter + 120, 300, 30);
+        passwordField.setBounds(35, 300, 300, 30);
         add(passwordField);
 
-
-        //TODO: Tạo label "Confirm Password"
-        JLabel confirmPasswordLabel = InitUtils.creatLabel("Confirm Password", xCenter + 42, yCenter + 165, 190, 30, 20);
+        // Tạo label "Confirm Password" với tọa độ cố định
+        JLabel confirmPasswordLabel = InitUtils.creatLabel("Confirm Password", 35, 350, 210, 30, 20);
         add(confirmPasswordLabel);
+        // Tạo ô input cho "Confirm Password" với tọa độ cố định
         JPasswordField confirmPasswordField = new JPasswordField();
-        confirmPasswordField.setBounds(xCenter + 42, yCenter + 200, 300, 30);
+        confirmPasswordField.setBounds(35, 390, 300, 30);
         add(confirmPasswordField);
 
         //TODO: Tạo "Gender"
-        JLabel genderLabel = InitUtils.creatLabel("Gender", xCenter + 42, yCenter + 245, 100, 30, 20);
+        JLabel genderLabel = InitUtils.creatLabel("Gender",  35,  430, 100, 30, 20);
         add(genderLabel);
-        JCheckBox maleCheckBox = InitUtils.createCustomCheckBox("Male", xCenter + 42, yCenter + 280, true);
+        JCheckBox maleCheckBox = InitUtils.createCustomCheckBox("Male",  35, 460, true);
         add(maleCheckBox);
-        JCheckBox femaleCheckBox = InitUtils.createCustomCheckBox("Female", xCenter + 150, yCenter + 280, false);
+        JCheckBox femaleCheckBox = InitUtils.createCustomCheckBox("Female",  150,  460, false);
         add(femaleCheckBox);
         ButtonGroup genderGroup = new ButtonGroup();
         genderGroup.add(maleCheckBox);
         genderGroup.add(femaleCheckBox);
 
-        //TODO: Tạo "Register"
-        JLabel labelRegister = InitUtils.creatLabel("Register", xCenter + 157, yCenter + 325, 130, 40, 20);
+        // Tạo nút "Register" với tọa độ cố định
+        JLabel labelRegister = InitUtils.creatLabel("Register", 140, 530, 120, 40, 20);
         add(labelRegister);
-        JButton registerButton = InitUtils.createButtonFunctionMenu(xCenter + 110, yCenter + 313, 190, 65, 300, 280, "/images/yellowbutton.png", labelRegister);
+        JButton registerButton = InitUtils.createButtonFunctionMenu(85, 520, 210, 65, 340, 300, "/images/yellowbutton.png", labelRegister);
         registerButton.setText("Register");
         add(registerButton);
 
-        // TODO: nút "Back to Login"
-        JLabel labelBack = InitUtils.creatLabel("Back To Login", xCenter + 130, yCenter + 405, 150, 40, 20);
+        JLabel labelBack = InitUtils.creatLabel("Back To Login", 113, 620, 160, 40, 20);
         add(labelBack);
-        JButton backButton = InitUtils.createButtonFunctionMenu(xCenter + 110, yCenter + 395, 190, 65, 300, 280, "/images/yellowbutton.png", labelBack);
-        backButton.setText("Back");
-        add(backButton);
+        JButton backLoginButton = InitUtils.createButtonFunctionMenu(80, 610, 210, 65, 350, 300, "/images/yellowbutton.png", labelBack);
+        registerButton.setText("backlogin");
+        add(backLoginButton);
 
-        //TODO: Sự kiện nút "Register"
+        // Sự kiện nút "Register"
         registerButton.addActionListener(e -> {
             String username = usernameField.getText();
-            String password = new String(passwordField.getPassword()); // Chuyển đổi mảng char[] thành chuỗi
-            String confirmPassword = new String(confirmPasswordField.getPassword()); // Chuyển đổi mảng char[] thành chuỗi
-
-
-            // Lấy giới tính đã chọn
-            String gender = null;
-            if (maleCheckBox.isSelected()) {
-                gender = "Male";
-            } else if (femaleCheckBox.isSelected()) {
-                gender = "Female";
-            }
-
-            // Kiểm tra xem mật khẩu có khớp không
-            if (password.compareTo(confirmPassword) == 0) {
-                registerUser(username, password, gender, socket, parentFrame);
+            String password = new String(passwordField.getPassword());
+            String confirmPassword = new String(confirmPasswordField.getPassword());
+            if (password.equals(confirmPassword)) {
+                handleRegister(username, password, menuGameView);
             } else {
-                JOptionPane.showMessageDialog(parentFrame, "Passwords do not match!");
+                JOptionPane.showMessageDialog(this, "Passwords do not match!");
             }
         });
 
-        //TODO: Sự kiện nút "Back to Login"
-        backButton.addActionListener(e -> {
-            parentFrame.setContentPane(new LoginView(parentFrame, socket)); // Quay lại form đăng nhập
-            parentFrame.revalidate();
-            parentFrame.repaint();
+        backLoginButton.addActionListener(e -> {
+            Container parent = this.getParent();
+            CardLayout layout = (CardLayout) parent.getLayout();
+            layout.show(parent, "LoginView");
         });
     }
 
-    public void registerUser(String username, String password, String gender, ManageSocket socket, JFrame parentFrame) {
-        DataSending<UserRequest> dataSending = new DataSending<>();
-        UserRequest userRequest = new UserRequest();
-        userRequest.setUserName(username);
-        userRequest.setPassword(password);
-        userRequest.setGender(gender);
-        dataSending.setData(userRequest);
-        dataSending.setRequestType("Register");
+    // Xử lý logic đăng ký
+    public void handleRegister(String username, String password, MenuGameView menuGameView) {
         try {
+            // Lấy instance của ManageSocket
+            ManageSocket socket = ManageSocket.getInstance(null);
+
+            DataSending<UserRequest> dataSending = new DataSending<>();
+            UserRequest userRequest = new UserRequest();
+            userRequest.setUserName(username);
+            userRequest.setPassword(password);
+            dataSending.setData(userRequest);
+            dataSending.setRequestType("Register");
+
             socket.getWriter().writeObject(dataSending);
             socket.getWriter().flush();
             socket.getWriter().reset();
 
-            DataSending<String> response = (DataSending<String>) socket.getReader().readObject();
-            String message = response.getData();
-            if(response.getData().equals("Success")) JOptionPane.showMessageDialog(parentFrame, "Register success");
-            else JOptionPane.showMessageDialog(parentFrame, "Register failed");
-
-
-
+            DataSending<String> dataSendingUser = (DataSending<String>) socket.getReader().readObject();
+            String message = dataSendingUser.getData();
+            if (message.equals("Success")) {
+                JOptionPane.showMessageDialog(this, message);
+            } else {
+                JOptionPane.showMessageDialog(this, message);
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
-
-//    public static void showCustomDialog(JFrame parentFrame, String message, ManageSocket socket, User user) {
-//        // Tạo JDialog
-//        JDialog dialog = new JDialog(parentFrame, "", true);
-//        dialog.setLayout(null); // Sử dụng layout null để tự do đặt vị trí các thành phần
-//
-//        // Tạo một JLabel chứa ảnh nền
-//        ImageIcon backgroundIcon = new ImageIcon(RegisterView.class.getResource("/images/bgall.jpg")); // Đường dẫn đến ảnh nền
-//        JLabel backgroundLabel = new JLabel(backgroundIcon);
-//        backgroundLabel.setBounds(0, 0, 300, 200); // Đặt kích thước ảnh nền phù hợp với kích thước dialog
-//        dialog.setContentPane(backgroundLabel); // Đặt backgroundLabel làm content pane của dialog
-//        backgroundLabel.setLayout(null); // Sử dụng layout null để tự do đặt vị trí các thành phần bên trong
-//
-//        // Tạo nội dung tin nhắn (Label) và đặt vị trí
-//        JLabel messageLabel = new JLabel("<html><div style='text-align: center; font-size: 14px; color: white;'>" + message + "</div></html>");
-//        if(message.equals("Success")) messageLabel.setBounds(110, 20, 200, 50); // Đặt vị trí cho label chứa message
-//        else messageLabel.setBounds(50, 20, 200, 50);
-//        backgroundLabel.add(messageLabel); // Thêm messageLabel vào backgroundLabel
-//
-//        // Tạo các nút và đặt vị trí
-//        JButton button1 = new JButton("Go to game lobby");
-//        button1.setBounds(30, 100, 110, 30); // Đặt vị trí cho nút 1
-//        button1.addActionListener(e -> {
-//            dialog.dispose();
-//            MenuGameView menuGameView = new MenuGameView(parentFrame, socket,user);
-//            parentFrame.setContentPane(menuGameView);
-//            parentFrame.revalidate();
-//            parentFrame.repaint();
-//        });
-//
-//        JButton button2 = new JButton("Exit");
-//        button2.setBounds(160, 100, 100, 30); // Đặt vị trí cho nút 2
-//        button2.addActionListener(e -> {
-//            dialog.dispose();
-//            parentFrame.dispose();
-//        });
-//
-//        // Thêm các nút vào backgroundLabel (thay vì thêm trực tiếp vào dialog)
-//        backgroundLabel.add(button1);
-//        backgroundLabel.add(button2);
-//
-//        // Cài đặt kích thước và hiển thị dialog
-//        dialog.setSize(300, 200);
-//        dialog.setLocationRelativeTo(parentFrame); // Hiển thị ở giữa màn hình
-//        dialog.setVisible(true);
-//    }
-
-
-
-
-
 
 
     @Override
@@ -192,5 +130,3 @@ public class RegisterView extends JPanel {
         }
     }
 }
-
-
